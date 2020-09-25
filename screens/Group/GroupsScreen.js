@@ -8,7 +8,8 @@ import {
   StyleSheet,
   Text,
   Image,
-  Platform
+  Platform,
+  Dimensions,
 } from 'react-native';
 import { Fab, Container } from 'native-base';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -16,17 +17,20 @@ import Toast from 'react-native-easy-toast';
 import { Row } from 'react-native-easy-grid';
 import PropTypes from 'prop-types';
 import { SearchBar } from 'react-native-elements';
+import { Header } from 'react-navigation-stack';
+
 import Colors from '../../constants/Colors';
-import { getAll } from '../../store/actions/groups.actions';
+import { getAll, updatePrevious } from '../../store/actions/groups.actions';
 import i18n from '../../languages';
 import dtIcon from '../../assets/images/dt-icon.png';
 import sharedTools from '../../shared';
 
 const styles = StyleSheet.create({
   flatListItem: {
-    height: 40,
-    backgroundColor: 'white',
+    height: 40 /* this needs auto sizing */,
     margin: 20,
+    marginTop: 10,
+    paddingBottom: 10,
   },
   groupSubtitle: {
     flex: 1,
@@ -106,6 +110,9 @@ const styles = StyleSheet.create({
 let toastError,
   statusCircleSize = 15;
 
+const windowHeight = Dimensions.get('window').height,
+  headerHeight = Header.HEIGHT;
+
 class GroupsScreen extends React.Component {
   state = {
     refresh: false,
@@ -117,6 +124,7 @@ class GroupsScreen extends React.Component {
     offset: 0,
     limit: 100,
     sort: '-last_modified',
+    fixFABIndex: false,
   };
 
   componentDidUpdate(prevProps) {
@@ -186,10 +194,18 @@ class GroupsScreen extends React.Component {
       <View style={{ flexDirection: 'row', height: '100%' }}>
         <View style={{ flexDirection: 'column', flexGrow: 1 }}>
           <View style={{ flexDirection: 'row' }}>
-            <Text style={{ flex: 1, flexWrap: 'wrap', fontWeight: 'bold' }}>{group.title}</Text>
+            <Text style={{ textAlign: 'left', flex: 1, flexWrap: 'wrap', fontWeight: 'bold' }}>
+              {group.title}
+            </Text>
           </View>
           <View style={{ flexDirection: 'row' }}>
-            <Text style={styles.groupSubtitle}>
+            <Text
+              style={[
+                styles.groupSubtitle,
+                {
+                  textAlign: 'left',
+                },
+              ]}>
               {this.props.groupSettings.fields.group_status.values[group.group_status]
                 ? this.props.groupSettings.fields.group_status.values[group.group_status].label
                 : ''}
@@ -208,7 +224,17 @@ class GroupsScreen extends React.Component {
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'column', width: statusCircleSize }}>
+        <View
+          style={[
+            {
+              flexDirection: 'column',
+              width: statusCircleSize,
+              paddingTop: 0,
+              marginTop: 'auto',
+              marginBottom: 'auto',
+            },
+            this.props.isRTL ? { marginRight: 5 } : { marginLeft: 5 },
+          ]}>
           <View
             style={{
               width: statusCircleSize,
@@ -233,73 +259,81 @@ class GroupsScreen extends React.Component {
     />
   );
 
-  onRefresh = (pagination = false) => {
-    if (pagination) {
-      this.setState(
-        (prevState) => ({
-          offset: prevState.offset + prevState.limit,
-          filtered: false,
-          search: '',
-        }),
-        () => {
-          this.props.getAllGroups(
-            this.props.userData.domain,
-            this.props.userData.token,
-            this.state.offset,
-            this.state.limit,
-            this.state.sort,
-          );
-        },
-      );
-    } else {
-      this.setState(
-        () => ({
-          offset: 0,
-          filtered: false,
-          search: '',
-        }),
-        () => {
-          this.props.getAllGroups(
-            this.props.userData.domain,
-            this.props.userData.token,
-            this.state.offset,
-            this.state.limit,
-            this.state.sort,
-          );
-        },
-      );
-    }
+  onRefresh = (increasePagination = false, returnFromDetail = false) => {
+    let newState = {
+      offset: increasePagination ? this.state.offset + this.state.limit : 0,
+      filtered: false,
+      search: '',
+      searchBarFilter: {
+        ...this.state.searchBarFilter,
+        toggle: false,
+        currentFilter: '',
+      },
+    };
+    this.setState(
+      (prevState) => {
+        return returnFromDetail ? prevState : newState;
+      },
+      () => {
+        this.props.getAllGroups(
+          this.props.userData.domain,
+          this.props.userData.token,
+          this.state.offset,
+          this.state.limit,
+          this.state.sort,
+        );
+      },
+    );
   };
 
   goToGroupDetailScreen = (groupData = null) => {
     if (groupData) {
+      this.props.updatePrevious([
+        {
+          groupId: parseInt(groupData.ID),
+          onlyView: true,
+          groupName: groupData.title,
+        },
+      ]);
       // Detail
       this.props.navigation.navigate('GroupDetail', {
         groupId: groupData.ID,
         onlyView: true,
         groupName: groupData.title,
-        previousList: [],
-        onGoBack: () => this.onRefresh(),
+        onGoBack: () => this.onRefresh(false, true),
       });
     } else {
+      this.props.updatePrevious([]);
       // Create
       this.props.navigation.navigate('GroupDetail', {
-        previousList: [],
         onlyView: true,
-        onGoBack: () => this.onRefresh(),
+        onGoBack: () => this.onRefresh(false, true),
       });
     }
   };
 
   renderHeader = () => {
     return (
-      <View>
+      <View
+        onLayout={(event) => {
+          let viewHeight = event.nativeEvent.layout.height;
+          // headerHeight * 2 = headerHeight + bottomBarNavigation height
+          this.setState({
+            fixFABIndex:
+              windowHeight - (viewHeight + headerHeight * 2) < 100 && Platform.OS == 'android',
+          });
+        }}>
         <SearchBar
           placeholder={i18n.t('global.search')}
           onChangeText={(text) => this.SearchFilterFunction(text)}
           autoCorrect={false}
           value={this.state.search}
-          containerStyle={[styles.searchBarContainer, Platform.OS == "ios" ? { borderBottomColor: Colors.grayLight, borderBottomWidth: 1 } : { elevation: 5 }]}
+          containerStyle={[
+            styles.searchBarContainer,
+            Platform.OS == 'ios'
+              ? { borderBottomColor: Colors.grayLight, borderBottomWidth: 1 }
+              : { elevation: 5 },
+          ]}
           inputContainerStyle={styles.searchBarInput}
         />
         {!this.state.haveGroups && this.noGroupsRender()}
@@ -389,9 +423,13 @@ class GroupsScreen extends React.Component {
             }
             ListFooterComponent={this.renderFooter}
             keyExtractor={(item) => item.ID.toString()}
+            style={{ backgroundColor: Colors.mainBackgroundColor }}
           />
           <Fab
-            style={{ backgroundColor: Colors.tintColor }}
+            style={[
+              { backgroundColor: Colors.tintColor },
+              this.state.fixFABIndex ? { zIndex: -1 } : {},
+            ]}
             position="bottomRight"
             onPress={() => this.goToGroupDetailScreen()}>
             <Icon name="md-add" />
@@ -460,6 +498,9 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) => ({
   getAllGroups: (domain, token, offset, limit, sort) => {
     dispatch(getAll(domain, token, offset, limit, sort));
+  },
+  updatePrevious: (previousGroups) => {
+    dispatch(updatePrevious(previousGroups));
   },
 });
 
