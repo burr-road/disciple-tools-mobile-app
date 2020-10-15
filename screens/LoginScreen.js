@@ -25,12 +25,13 @@ import SmoothPinCodeInput from 'react-native-smooth-pincode-input';
 import { BlurView } from 'expo-blur';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as Localization from 'expo-localization';
+import { Row } from 'react-native-easy-grid';
 
 import i18n from '../languages';
 import locales from '../languages/locales';
 import Colors from '../constants/Colors';
 import { login, getUserInfo } from '../store/actions/user.actions';
-import { setLanguage } from '../store/actions/i18n.actions';
+import { setLanguage, cancelSetLanguage } from '../store/actions/i18n.actions';
 import TextField from '../components/TextField';
 import {
   getLocations,
@@ -39,11 +40,12 @@ import {
   getAll as getAllGroups,
   getLocationListLastModifiedDate,
 } from '../store/actions/groups.actions';
-import { getUsers, getContactFilters } from '../store/actions/users.actions';
+import { getUsers, getContactFilters, getGroupFilters } from '../store/actions/users.actions';
 import { getContactSettings, getAll as getAllContacts } from '../store/actions/contacts.actions';
 import { logout } from '../store/actions/user.actions';
 import { getActiveQuestionnaires } from '../store/actions/questionnaire.actions';
-
+import { getNotificationsCount } from '../store/actions/notifications.actions';
+//
 const styles = StyleSheet.create({
   container: {
     justifyContent: 'flex-end',
@@ -191,12 +193,6 @@ class LoginScreen extends React.Component {
   state = {
     loading: false,
     modalVisible: false,
-    contactSettingsRetrieved: false,
-    groupSettingsRetrieved: false,
-    geonamesRetrieved: false,
-    peopleGroupsRetrieved: false,
-    usersRetrieved: false,
-    appLanguageSet: false,
     offset: 0,
     limit: 5000,
     sort: '-last_modified',
@@ -207,10 +203,18 @@ class LoginScreen extends React.Component {
     userData: {
       token: null,
     },
-    userDataRetrieved: false,
     geonamesLength: 0,
     toggleRestartDialog: false,
+    contactSettingsRetrieved: false,
+    groupSettingsRetrieved: false,
+    peopleGroupsRetrieved: false,
+    usersRetrieved: false,
+    appLanguageSet: false,
+    userDataRetrieved: false,
+    geonamesRetrieved: false,
     contactFiltersRetrieved: false,
+    groupFiltersRetrieved: false,
+    notificationsCountRetrieved: false,
   };
 
   constructor(props) {
@@ -265,6 +269,8 @@ class LoginScreen extends React.Component {
       geonamesLastModifiedDate,
       geonamesLength,
       contactFilters,
+      groupFilters,
+      notificationsCount,
     } = nextProps;
     let newState = {
       ...prevState,
@@ -326,6 +332,18 @@ class LoginScreen extends React.Component {
           contactFiltersRetrieved: true,
         };
       }
+      if (groupFilters) {
+        newState = {
+          ...newState,
+          groupFiltersRetrieved: true,
+        };
+      }
+      if (notificationsCount !== null) {
+        newState = {
+          ...newState,
+          notificationsCountRetrieved: true,
+        };
+      }
     }
 
     const error =
@@ -351,6 +369,9 @@ class LoginScreen extends React.Component {
         appLanguageSet: false,
         userDataRetrieved: false,
         geonamesRetrieved: false,
+        contactFiltersRetrieved: false,
+        groupFiltersRetrieved: false,
+        notificationsCountRetrieved: false,
       });
     });
     this.initLoginScreen();
@@ -394,12 +415,14 @@ class LoginScreen extends React.Component {
               this.setState({
                 contactSettingsRetrieved: true,
                 groupSettingsRetrieved: true,
-                geonamesRetrieved: true,
                 peopleGroupsRetrieved: true,
                 usersRetrieved: true,
                 appLanguageSet: true,
                 userDataRetrieved: true,
+                geonamesRetrieved: true,
                 contactFiltersRetrieved: true,
+                groupFiltersRetrieved: true,
+                notificationsCountRetrieved: true,
               });
             },
           );
@@ -431,6 +454,9 @@ class LoginScreen extends React.Component {
       peopleGroupsRetrieved,
       usersRetrieved,
       contactFiltersRetrieved,
+      groupFiltersRetrieved,
+      notificationsCountRetrieved,
+      userDataRetrieved,
     } = this.state;
 
     // User logged successfully
@@ -470,11 +496,14 @@ class LoginScreen extends React.Component {
     if (
       contactSettingsRetrieved &&
       groupSettingsRetrieved &&
-      appLanguageSet &&
-      geonamesRetrieved &&
       peopleGroupsRetrieved &&
       usersRetrieved &&
-      contactFiltersRetrieved
+      appLanguageSet &&
+      userDataRetrieved &&
+      geonamesRetrieved &&
+      contactFiltersRetrieved &&
+      groupFiltersRetrieved &&
+      notificationsCountRetrieved
     ) {
       let listsLastUpdate = new Date().toString();
       listsLastUpdate = new Date(listsLastUpdate).toISOString();
@@ -567,6 +596,8 @@ class LoginScreen extends React.Component {
     this.props.getUsers(this.props.userData.domain, this.props.userData.token);
     this.props.getContactFilters(this.props.userData.domain, this.props.userData.token);
     this.props.getActiveQuestionnaires(this.props.userData.domain, this.props.userData.token);
+    this.props.getGroupFilters(this.props.userData.domain, this.props.userData.token);
+    this.props.getNotificationsCount(this.props.userData.domain, this.props.userData.token);
   };
 
   getUserInfo = () => {
@@ -661,6 +692,14 @@ class LoginScreen extends React.Component {
     setTimeout(() => {
       Updates.reload();
     }, 1000);
+  };
+
+  cancelSetLanguage = () => {
+    i18n.setLocale(this.props.i18n.previousLocale, this.props.i18n.previousIsRTL);
+    this.props.cancelSetLanguage();
+    this.setState({
+      toggleRestartDialog: false,
+    });
   };
 
   // TODO: How to disable iCloud save password feature?
@@ -852,7 +891,8 @@ class LoginScreen extends React.Component {
               <SmoothPinCodeInput
                 password
                 mask="﹡"
-                cellSize={60}
+                cellSize={42}
+                codeLength={6}
                 ref={this.pinInput}
                 value={this.state.pin}
                 onTextChange={(pin) => {
@@ -907,9 +947,31 @@ class LoginScreen extends React.Component {
                   ': ' +
                   (this.props.i18n.isRTL ? 'RTL' : 'LTR')}
               </Text>
-              <Button block style={styles.dialogButton} onPress={this.restartApp}>
-                <Text style={{ color: '#FFFFFF' }}>{i18n.t('appRestart.button')}</Text>
-              </Button>
+              <Row style={{ height: 60 }}>
+                <Button
+                  block
+                  style={[
+                    styles.dialogButton,
+                    {
+                      backgroundColor: '#ffffff',
+                      width: 120,
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                    },
+                  ]}
+                  onPress={this.cancelSetLanguage}>
+                  <Text style={{ color: Colors.tintColor }}>{i18n.t('global.cancel')}</Text>
+                </Button>
+                <Button
+                  block
+                  style={[
+                    styles.dialogButton,
+                    { width: 120, marginLeft: 'auto', marginRight: 'auto' },
+                  ]}
+                  onPress={this.restartApp}>
+                  <Text style={{ color: '#FFFFFF' }}>{i18n.t('appRestart.button')}</Text>
+                </Button>
+              </Row>
             </View>
           </BlurView>
         ) : null}
@@ -984,6 +1046,7 @@ LoginScreen.propTypes = {
   getGroups: PropTypes.func.isRequired,
   getUserInfo: PropTypes.func.isRequired,
   logout: PropTypes.func.isRequired,
+  getNotificationsCount: PropTypes.func.isRequired,
 };
 LoginScreen.defaultProps = {
   userData: {
@@ -1025,6 +1088,8 @@ const mapStateToProps = (state) => ({
   geonamesLastModifiedDate: state.groupsReducer.geonamesLastModifiedDate,
   geonamesLength: state.groupsReducer.geonamesLength,
   contactFilters: state.usersReducer.contactFilters,
+  groupFilters: state.usersReducer.groupFilters,
+  notificationsCount: state.notificationsReducer.notificationsCount,
 });
 const mapDispatchToProps = (dispatch) => ({
   loginDispatch: (domain, username, password) => {
@@ -1068,6 +1133,15 @@ const mapDispatchToProps = (dispatch) => ({
   },
   getActiveQuestionnaires: (domain, token) => {
     dispatch(getActiveQuestionnaires(domain, token));
+  },
+  getGroupFilters: (domain, token) => {
+    dispatch(getGroupFilters(domain, token));
+  },
+  getNotificationsCount: (domain, token) => {
+    dispatch(getNotificationsCount(domain, token));
+  },
+  cancelSetLanguage: () => {
+    dispatch(cancelSetLanguage());
   },
 });
 export default connect(mapStateToProps, mapDispatchToProps)(LoginScreen);

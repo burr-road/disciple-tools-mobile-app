@@ -21,7 +21,7 @@ import { Updates } from 'expo';
 import Constants from 'expo-constants';
 import * as MailComposer from 'expo-mail-composer';
 import Colors from '../constants/Colors';
-import { setLanguage } from '../store/actions/i18n.actions';
+import { setLanguage, cancelSetLanguage, setCancelFalse } from '../store/actions/i18n.actions';
 import {
   logout,
   toggleRememberPassword,
@@ -34,6 +34,7 @@ import i18n from '../languages';
 import locales from '../languages/locales';
 import { BlurView } from 'expo-blur';
 import SmoothPinCodeInput from 'react-native-smooth-pincode-input';
+import { Row } from 'react-native-easy-grid';
 
 const propTypes = {
   navigation: PropTypes.shape({
@@ -178,8 +179,24 @@ class SettingsScreen extends React.Component {
   componentDidUpdate(prevProps) {
     const { rememberPassword, userData, userReducerError } = this.props;
 
+    // Updated user locale setting
     if (userData && prevProps.userData !== userData && userData.locale !== this.props.i18n.locale) {
-      this.changeLanguage(userData.locale.replace('_', '-'));
+      // Only update app language on user profile language update (not cancel language change)
+      if (!this.props.i18n.canceledLocaleChange) {
+        this.changeLanguage(userData.locale.replace('_', '-'));
+      }
+    } else {
+      if (this.props.i18n.canceledLocaleChange) {
+        this.props.setCancelFalse();
+        this.updateUserInfo({
+          locale: prevProps.i18n.previousLocale.replace('-', '_'),
+        });
+      }
+    }
+
+    // Updated locale on store
+    if (prevProps.i18n.locale !== this.props.i18n.locale && !this.props.i18n.canceledLocaleChange) {
+      this.showRestartDialog();
     }
 
     if (rememberPassword !== undefined && prevProps.rememberPassword !== rememberPassword) {
@@ -215,11 +232,13 @@ class SettingsScreen extends React.Component {
   };
 
   onFABPress = () => {
-    const toastMsg = this.props.isConnected
-      ? i18n.t('settingsScreen.networkUnavailable')
-      : i18n.t('settingsScreen.networkAvailable');
-    this.toast.show(toastMsg, 3000);
-    this.props.toggleNetworkConnectivity(this.props.isConnected);
+    if (this.props.networkStatus) {
+      const toastMsg = this.props.isConnected
+        ? i18n.t('settingsScreen.networkUnavailable')
+        : i18n.t('settingsScreen.networkAvailable');
+      this.toast.show(toastMsg, 3000);
+      this.props.toggleNetworkConnectivity(this.props.isConnected);
+    }
   };
 
   draftNewSupportEmail = () => {
@@ -310,11 +329,8 @@ class SettingsScreen extends React.Component {
     let locale = locales.find((item) => {
       return item.code === languageCode;
     });
-    // Set locale and RTL in i18n Library
-    i18n.setLocale(locale.code, locale.rtl);
     // Set locale and RTL in State
     this.props.setLanguage(locale.code, locale.rtl);
-    this.showRestartDialog();
   }
 
   showRestartDialog = () => {
@@ -324,7 +340,16 @@ class SettingsScreen extends React.Component {
   };
 
   restartApp = () => {
-    Updates.reload();
+    i18n.setLocale(this.props.i18n.locale, this.props.i18n.isRTL).then(() => {
+      Updates.reload();
+    });
+  };
+
+  cancelSetLanguage = () => {
+    this.props.cancelSetLanguage();
+    this.setState({
+      toggleRestartDialog: false,
+    });
   };
 
   render() {
@@ -399,7 +424,11 @@ class SettingsScreen extends React.Component {
               </Text>
             </Body>
             <Right>
-              <Switch value={this.props.isConnected} onChange={this.onFABPress} />
+              <Switch
+                value={this.props.isConnected}
+                onChange={this.onFABPress}
+                disabled={!this.props.networkStatus}
+              />
             </Right>
           </ListItem>
           {/* === Language === */}
@@ -564,7 +593,8 @@ class SettingsScreen extends React.Component {
                 <SmoothPinCodeInput
                   password
                   mask="﹡"
-                  cellSize={60}
+                  cellSize={42}
+                  codeLength={6}
                   ref={this.pinInput}
                   value={this.state.pin}
                   onTextChange={(pin) => {
@@ -634,9 +664,31 @@ class SettingsScreen extends React.Component {
                     (this.props.i18n.isRTL ? 'RTL' : 'LTR')}
                 </Text>
               ) : null}
-              <NbButton block style={styles.dialogButton} onPress={this.restartApp}>
-                <Text style={{ color: '#FFFFFF' }}>{i18n.t('appRestart.button')}</Text>
-              </NbButton>
+              <Row style={{ height: 60 }}>
+                <NbButton
+                  block
+                  style={[
+                    styles.dialogButton,
+                    {
+                      backgroundColor: '#ffffff',
+                      width: 120,
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                    },
+                  ]}
+                  onPress={this.cancelSetLanguage}>
+                  <Text style={{ color: Colors.tintColor }}>{i18n.t('global.cancel')}</Text>
+                </NbButton>
+                <NbButton
+                  block
+                  style={[
+                    styles.dialogButton,
+                    { width: 120, marginLeft: 'auto', marginRight: 'auto' },
+                  ]}
+                  onPress={this.restartApp}>
+                  <Text style={{ color: '#FFFFFF' }}>{i18n.t('appRestart.button')}</Text>
+                </NbButton>
+              </Row>
             </View>
           </BlurView>
         ) : null}
@@ -656,6 +708,7 @@ const mapStateToProps = (state) => ({
   rememberPassword: state.userReducer.rememberPassword,
   pinCode: state.userReducer.pinCode,
   userReducerError: state.userReducer.error,
+  networkStatus: state.networkConnectivityReducer.networkStatus,
 });
 const mapDispatchToProps = (dispatch) => ({
   toggleNetworkConnectivity: (isConnected) => {
@@ -678,6 +731,12 @@ const mapDispatchToProps = (dispatch) => ({
   },
   updateUserInfo: (domain, token, userInfo) => {
     dispatch(updateUserInfo(domain, token, userInfo));
+  },
+  cancelSetLanguage: () => {
+    dispatch(cancelSetLanguage());
+  },
+  setCancelFalse: () => {
+    dispatch(setCancelFalse());
   },
 });
 export default connect(mapStateToProps, mapDispatchToProps)(SettingsScreen);

@@ -28,7 +28,14 @@
     "nameRequired": "Ime (obavezno",
     "close": "Zatvoriti",
     "editComment": "Uredi",
-    "deleteComment": "Izbrisati"
+    "deleteComment": "Izbrisati",
+    "sortByLastModified": "",
+    "reset": "",
+    "apply": "",
+    "showing": "",
+    "comments": "",
+    "activity": "",
+    "submit": ""
   },
   "loginScreen": {
     "domain": {
@@ -125,6 +132,13 @@
       "quick_button_meeting_scheduled": "Sastanak zakazan",
       "quick_button_meeting_postponed": "Sastanak odgođen",
       "quick_button_meeting_complete": "Sastanak završen"
+    },
+    "attendance": {
+      "header": "",
+      "didAttendComment": "",
+      "didNotAttendComment": "",
+      "groupCommentLabel": "",
+      "groupComment": ""
     }
   },
   "notificationsScreen": {
