@@ -28,7 +28,14 @@
     "nameRequired": "Jina linalohitajika",
     "close": "Karibu",
     "editComment": "Hariri",
-    "deleteComment": "Futa"
+    "deleteComment": "Futa",
+    "sortByLastModified": "",
+    "reset": "",
+    "apply": "",
+    "showing": "",
+    "comments": "",
+    "activity": "",
+    "submit": ""
   },
   "loginScreen": {
     "domain": {
@@ -125,6 +132,13 @@
       "quick_button_meeting_scheduled": "Mkutano Umepangwa",
       "quick_button_meeting_postponed": "Mkutano Ulihairishwa",
       "quick_button_meeting_complete": "Mkutano Umekamilika"
+    },
+    "attendance": {
+      "header": "",
+      "didAttendComment": "",
+      "didNotAttendComment": "",
+      "groupCommentLabel": "",
+      "groupComment": ""
     }
   },
   "notificationsScreen": {

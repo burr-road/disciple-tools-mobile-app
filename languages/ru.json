@@ -28,7 +28,14 @@
     "nameRequired": "Имя обязательно",
     "close": "близко",
     "editComment": "редактировать",
-    "deleteComment": "Удалить"
+    "deleteComment": "Удалить",
+    "sortByLastModified": "",
+    "reset": "",
+    "apply": "",
+    "showing": "",
+    "comments": "",
+    "activity": "",
+    "submit": ""
   },
   "loginScreen": {
     "domain": {
@@ -125,6 +132,13 @@
       "quick_button_meeting_scheduled": "Встреча запланирована",
       "quick_button_meeting_postponed": "Встреча отложена",
       "quick_button_meeting_complete": "Встреча завершена"
+    },
+    "attendance": {
+      "header": "",
+      "didAttendComment": "",
+      "didNotAttendComment": "",
+      "groupCommentLabel": "",
+      "groupComment": ""
     }
   },
   "notificationsScreen": {

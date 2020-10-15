@@ -28,7 +28,14 @@
     "nameRequired": "Nome necessário",
     "close": "Fechar",
     "editComment": "Editar",
-    "deleteComment": "Excluir"
+    "deleteComment": "Excluir",
+    "sortByLastModified": "",
+    "reset": "",
+    "apply": "",
+    "showing": "",
+    "comments": "",
+    "activity": "",
+    "submit": ""
   },
   "loginScreen": {
     "domain": {
@@ -125,6 +132,13 @@
       "quick_button_meeting_scheduled": "Reunião agendada",
       "quick_button_meeting_postponed": "Reunião adiada",
       "quick_button_meeting_complete": "Reunião Completa"
+    },
+    "attendance": {
+      "header": "",
+      "didAttendComment": "",
+      "didNotAttendComment": "",
+      "groupCommentLabel": "",
+      "groupComment": ""
     }
   },
   "notificationsScreen": {

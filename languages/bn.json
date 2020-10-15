@@ -28,7 +28,14 @@
     "nameRequired": "নাম (প্রয়োজন",
     "close": "ঘনিষ্ঠ",
     "editComment": "সম্পাদনা করুন",
-    "deleteComment": "মুছে ফেলা"
+    "deleteComment": "মুছে ফেলা",
+    "sortByLastModified": "",
+    "reset": "",
+    "apply": "",
+    "showing": "",
+    "comments": "",
+    "activity": "",
+    "submit": ""
   },
   "loginScreen": {
     "domain": {
@@ -125,6 +132,13 @@
       "quick_button_meeting_scheduled": "সভা নির্ধারিত",
       "quick_button_meeting_postponed": "সভা স্থগিত",
       "quick_button_meeting_complete": "সভা সম্পূর্ণ"
+    },
+    "attendance": {
+      "header": "",
+      "didAttendComment": "",
+      "didNotAttendComment": "",
+      "groupCommentLabel": "",
+      "groupComment": ""
     }
   },
   "notificationsScreen": {
